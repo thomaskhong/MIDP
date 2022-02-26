@@ -26,6 +26,7 @@ finger_lengths = np.zeros(5)
 landmark_sum_indexes = [[4,2],[8,5],[12,9],[16,13],[20,17]]
 
 cap = cv2.VideoCapture(0)
+
 with mp_hands.Hands(
     model_complexity=0,
     min_detection_confidence=0.5,
