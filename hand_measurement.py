@@ -43,6 +43,8 @@ hand_landmark_coordinates = np.zeros((21,1,2)) # 21, 1-by-2 arrays that store th
 finger_lengths = np.zeros(5) # 5 values that store the length of the thumb to pinkie
 landmark_sum_indexes = [[4,2],[8,5],[12,9],[16,13],[20,17]] # array of which points correspond to each finger
 
+# Init of txt document object to which data will be written to
+doc = open('C:/Users/khong/OneDrive/Documents/MIDP/Grasshopper/test_stream.txt', 'w')
 
 ## --- Initialisation of parameters --- ###
 
@@ -166,7 +168,13 @@ while True:
     # define stop key and program break
     key = cv2.waitKey(1) & 0xFF
     if key == ord("q"):
+        # write all the measured data to a txt document
+        for i,x in enumerate(finger_lengths):
+            doc.write(str(x) + '\n')
         break
 
 # terminate the video capture thread
 cap.release()
+
+# close txt file to which data was written
+doc.close()
