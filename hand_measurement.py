@@ -44,7 +44,7 @@ finger_lengths = np.zeros(5) # 5 values that store the length of the thumb to pi
 landmark_sum_indexes = [[4,2],[8,5],[12,9],[16,13],[20,17]] # array of which points correspond to each finger
 
 # Init of txt document object to which data will be written to
-doc = open('C:/Users/khong/OneDrive/Documents/MIDP/Grasshopper/test_stream.txt', 'w')
+doc = open('C:/Users/khong/OneDrive/Documents/MIDP/Grasshopper/data_output.txt', 'w')
 
 ## --- Initialisation of parameters --- ###
 
@@ -65,102 +65,104 @@ while True:
 
     # Continue with calculations only if at least one Aruco code is detected
     # Also ensures that the calculations are only performed if the right Aruco codes are detected (i.e.: the 0th to 3rd codes). The detection would sometimes mistake one of them for a different code and try to use that as an index, throwing an out of bounds error 
-    if len(corners) > 0 or np.all(ids.flatten()<4):
+    if len(corners) > 0:
         # flattens the ids array so that it can be more easily accessed
         ids = ids.flatten()
 
-        # initialise a fresh storage for measurements of:
-        marker_sides = np.zeros((4,1,4)) # each side length of the marker for each marker
-        line_deltas = np.zeros((4)) # the difference between the average of the horizontal marker sides and the average of the vertical marker sides for each marker
+        if np.all(ids<4):
 
-        # looping through each detected marker
-        for (markerCorner, markerID) in zip(corners, ids):
-            # extract each individual corner from an Aruco marker
-            corners = markerCorner.reshape((4, 2))
-            (topLeft, topRight, bottomRight, bottomLeft) = corners
-            # parse the corners into individual variables
-            topRight = (int(topRight[0]), int(topRight[1]))
-            bottomRight = (int(bottomRight[0]), int(bottomRight[1]))
-            bottomLeft = (int(bottomLeft[0]), int(bottomLeft[1]))
-            topLeft = (int(topLeft[0]), int(topLeft[1]))
+            # initialise a fresh storage for measurements of:
+            marker_sides = np.zeros((4,1,4)) # each side length of the marker for each marker
+            line_deltas = np.zeros((4)) # the difference between the average of the horizontal marker sides and the average of the vertical marker sides for each marker
 
-            # calculate the distance between each corner, thus giving the length of the edges of the marker
-            topLine_length = int(calc_line_length(topLeft,topRight))
-            rightLine_length = int(calc_line_length(topRight,bottomRight))
-            bottomLine_length = int(calc_line_length(bottomLeft,bottomRight))
-            leftLine_length = int(calc_line_length(topLeft,bottomLeft))
+            # looping through each detected marker
+            for (markerCorner, markerID) in zip(corners, ids):
+                # extract each individual corner from an Aruco marker
+                corners = markerCorner.reshape((4, 2))
+                (topLeft, topRight, bottomRight, bottomLeft) = corners
+                # parse the corners into individual variables
+                topRight = (int(topRight[0]), int(topRight[1]))
+                bottomRight = (int(bottomRight[0]), int(bottomRight[1]))
+                bottomLeft = (int(bottomLeft[0]), int(bottomLeft[1]))
+                topLeft = (int(topLeft[0]), int(topLeft[1]))
 
-            # put the edge lengths into appropriate location in the marker_sides variable
-            marker_sides[markerID] = (topLine_length,rightLine_length,bottomLine_length,leftLine_length)
+                # calculate the distance between each corner, thus giving the length of the edges of the marker
+                topLine_length = int(calc_line_length(topLeft,topRight))
+                rightLine_length = int(calc_line_length(topRight,bottomRight))
+                bottomLine_length = int(calc_line_length(bottomLeft,bottomRight))
+                leftLine_length = int(calc_line_length(topLeft,bottomLeft))
 
-            # calculate the horizontal and vertical averages of the marker lengths, then place these in storage
-            line_averages = ((topLine_length+bottomLine_length)/2 , (leftLine_length+rightLine_length)/2)
-            marker_length_averages[markerID] = np.mean(line_averages)
+                # put the edge lengths into appropriate location in the marker_sides variable
+                marker_sides[markerID] = (topLine_length,rightLine_length,bottomLine_length,leftLine_length)
 
-            # calculate the absolute difference between the horizontal and vertical averages
-            line_deltas[markerID] = math.sqrt((line_averages[0]-line_averages[1])**2)
+                # calculate the horizontal and vertical averages of the marker lengths, then place these in storage
+                line_averages = ((topLine_length+bottomLine_length)/2 , (leftLine_length+rightLine_length)/2)
+                marker_length_averages[markerID] = np.mean(line_averages)
 
-            # the image is experiencing a large amount of perspective distortion if the difference between the horizontal and vertical averages is larger than a percentage of the average length of the marker edges (set arbitrarily at 5% ~ 2 pixels for a relatively low capture resolution)
-            # if perspective distortion is present in the currently considered Aruco marker, colour it red. Otherwise colour it green.
-            if np.any(line_deltas > max(line_averages)*0.05):
-                g = 0
-                r = 255
-            else:
-                r = 0
-                g = 255
-            
-            # create the lines between each marker corner
-            cv2.line(image, topLeft, topRight, (0, g, r), 2)
-            cv2.line(image, topRight, bottomRight, (0, g, r), 2)
-            cv2.line(image, bottomRight, bottomLeft, (0, g, r), 2)
-            cv2.line(image, bottomLeft, topLeft, (0, g, r), 2)
+                # calculate the absolute difference between the horizontal and vertical averages
+                line_deltas[markerID] = math.sqrt((line_averages[0]-line_averages[1])**2)
 
-            # compute and draw the center (x, y)-coordinates of the ArUco marker
-            cX = int((topLeft[0] + bottomRight[0]) / 2.0)
-            cY = int((topLeft[1] + bottomRight[1]) / 2.0)
-            cv2.circle(image, (cX, cY), 4, (0, 0, 255), -1)
+                # the image is experiencing a large amount of perspective distortion if the difference between the horizontal and vertical averages is larger than a percentage of the average length of the marker edges (set arbitrarily at 5% ~ 2 pixels for a relatively low capture resolution)
+                # if perspective distortion is present in the currently considered Aruco marker, colour it red. Otherwise colour it green.
+                if np.any(line_deltas > max(line_averages)*0.05):
+                    g = 0
+                    r = 255
+                else:
+                    r = 0
+                    g = 255
+                
+                # create the lines between each marker corner
+                cv2.line(image, topLeft, topRight, (0, g, r), 2)
+                cv2.line(image, topRight, bottomRight, (0, g, r), 2)
+                cv2.line(image, bottomRight, bottomLeft, (0, g, r), 2)
+                cv2.line(image, bottomLeft, topLeft, (0, g, r), 2)
 
-            # draw the ArUco marker ID on the frame
-            cv2.putText(image, str(markerID),
-            (topLeft[0], topLeft[1] - 15),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.5, (0, 255, 0), 2)
+                # compute and draw the center (x, y)-coordinates of the ArUco marker
+                cX = int((topLeft[0] + bottomRight[0]) / 2.0)
+                cY = int((topLeft[1] + bottomRight[1]) / 2.0)
+                cv2.circle(image, (cX, cY), 4, (0, 0, 255), -1)
 
-        # start using the MediaPipe hand model with the chosen detection settings
-        with mp_hands.Hands(model_complexity=0,min_detection_confidence=0.5,min_tracking_confidence=0.5) as hands:
-            
-            # set captured frame as read-only for performance
-            image.flags.writeable = False
-            # get the height and width of the captured frame to normalise the pixel coordinates later
-            imageHeight, imageWidth, _ = image.shape
-            # convert captured frame into RGB as cv2 captures in BGR
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            
-            # detect hands in the captured frame
-            results = hands.process(image)
+                # draw the ArUco marker ID on the frame
+                cv2.putText(image, str(markerID),
+                (topLeft[0], topLeft[1] - 15),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5, (0, 255, 0), 2)
 
-            # perform calculations only if hand landmarks are detected
-            if results.multi_hand_landmarks:
-                for hand_landmarks in results.multi_hand_landmarks:
-                    # for each hand landmark, draw the landmark and the connections onto the frame
-                    mp_drawing.draw_landmarks(
-                        image,
-                        hand_landmarks,
-                        mp_hands.HAND_CONNECTIONS,
-                        mp_drawing_styles.get_default_hand_landmarks_style(),
-                        mp_drawing_styles.get_default_hand_connections_style())
+            # start using the MediaPipe hand model with the chosen detection settings
+            with mp_hands.Hands(model_complexity=0,min_detection_confidence=0.5,min_tracking_confidence=0.5) as hands:
+                
+                # set captured frame as read-only for performance
+                image.flags.writeable = False
+                # get the height and width of the captured frame to normalise the pixel coordinates later
+                imageHeight, imageWidth, _ = image.shape
+                # convert captured frame into RGB as cv2 captures in BGR
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                
+                # detect hands in the captured frame
+                results = hands.process(image)
 
-                    # for each hand landmark, extract the normalized landmark (ranges from 0 to 1), then calculate the pixel coordinates and store
-                    for point_num,point in enumerate(mp_hands.HandLandmark):
-                        normalizedLandmark = hand_landmarks.landmark[point]
-                        pixelCoordinatesLandmark = mp_drawing._normalized_to_pixel_coordinates(normalizedLandmark.x, normalizedLandmark.y, imageWidth, imageHeight)
-                        hand_landmark_coordinates[point_num] = np.array(pixelCoordinatesLandmark)
+                # perform calculations only if hand landmarks are detected
+                if results.multi_hand_landmarks:
+                    for hand_landmarks in results.multi_hand_landmarks:
+                        # for each hand landmark, draw the landmark and the connections onto the frame
+                        mp_drawing.draw_landmarks(
+                            image,
+                            hand_landmarks,
+                            mp_hands.HAND_CONNECTIONS,
+                            mp_drawing_styles.get_default_hand_landmarks_style(),
+                            mp_drawing_styles.get_default_hand_connections_style())
 
-        # loop through each finger and calculate length
-        for finger_num in range(0,5):
-            finger_lengths[finger_num] = round((calc_finger_length(finger_num, landmark_sum_indexes, hand_landmark_coordinates)*31)/np.mean(marker_length_averages),0)
-            # print(finger_lengths[finger_num])
-        print(finger_lengths)
+                        # for each hand landmark, extract the normalized landmark (ranges from 0 to 1), then calculate the pixel coordinates and store
+                        for point_num,point in enumerate(mp_hands.HandLandmark):
+                            normalizedLandmark = hand_landmarks.landmark[point]
+                            pixelCoordinatesLandmark = mp_drawing._normalized_to_pixel_coordinates(normalizedLandmark.x, normalizedLandmark.y, imageWidth, imageHeight)
+                            hand_landmark_coordinates[point_num] = np.array(pixelCoordinatesLandmark)
+
+            # loop through each finger and calculate length
+            for finger_num in range(0,5):
+                finger_lengths[finger_num] = round((calc_finger_length(finger_num, landmark_sum_indexes, hand_landmark_coordinates)*31)/np.mean(marker_length_averages),0)
+                # print(finger_lengths[finger_num])
+            print(finger_lengths)
             
     # show the frame with all information rendered on it
     cv2.imshow("Frame",cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
