@@ -1,3 +1,4 @@
+from operator import length_hint
 from turtle import shape
 import cv2
 import mediapipe as mp
@@ -25,6 +26,20 @@ def calc_finger_length(finger_index, landmark_sum_indexes, hand_landmark_coordin
         finger_length = finger_length + segment_length
     return finger_length
 
+# calc_palm_length takes as input:
+#   - palm landmark indexes over which to add up the length of the feature (these are based on how mediapipe labels the individual joints)
+#   - landmark coordinates (an array of the x and y coordinates of each joint)
+# The function then iterates through each measurement and returns an array containing all measurements
+def calc_palm_length(palm_landmark_sum_indexes, hand_landmark_coordinates):
+    for measurement in range(len(palm_landmark_sum_indexes)):
+        index_list = palm_landmark_sum_indexes[measurement]
+        palm_length = 0
+        for index in range(len(index_list)-1):
+            segment_length = calc_line_length(hand_landmark_coordinates[palm_landmark_sum_indexes[measurement][index]][0],hand_landmark_coordinates[palm_landmark_sum_indexes[measurement][index+1]][0])
+            palm_length = palm_length + segment_length
+        palm_measurements[measurement] = palm_length
+    return palm_measurements
+
 
 ## --- Initialisation of parameters --- ###
 
@@ -41,7 +56,9 @@ arucoParams = cv2.aruco.DetectorParameters_create()
 marker_length_averages = np.zeros(4) # 4 values that store the average marker length for each marker
 hand_landmark_coordinates = np.zeros((21,1,2)) # 21, 1-by-2 arrays that store the x and y position coordinates of each joint
 finger_lengths = np.zeros(5) # 5 values that store the length of the thumb to pinkie
-landmark_sum_indexes = [[4,2],[8,5],[12,9],[16,13],[20,17]] # array of which points correspond to each finger
+landmark_sum_indexes = [[4,2],[8,5],[12,9],[16,13],[20,17]] # array of indexes which correspond to each finger
+palm_measurements = np.zeros(3) # 3 values that store palm width, and two palm length measurements from index and pinkie knuckle to palm base
+palm_landmark_sum_indexes = [[5,9,13,17],[5,0],[17,0]] # array of indexes which point to correspond to the palm edges
 
 # Init of txt document object to which data will be written to
 doc = open('C:/Users/khong/OneDrive/Documents/MIDP/Grasshopper/data_output.txt', 'w')
@@ -161,8 +178,16 @@ while True:
             # loop through each finger and calculate length
             for finger_num in range(0,5):
                 finger_lengths[finger_num] = round((calc_finger_length(finger_num, landmark_sum_indexes, hand_landmark_coordinates)*31)/np.mean(marker_length_averages),0)
-                # print(finger_lengths[finger_num])
+            
+            # calculate palm measurements and round
+            palm_measurements = calc_palm_length(palm_landmark_sum_indexes, hand_landmark_coordinates)
+            palm_measurements_rounded = np.zeros(len(palm_measurements))
+            for i in range(len(palm_measurements)):
+                palm_measurements_rounded[i] = round(palm_measurements[i]*31/np.mean(marker_length_averages),0)
+
+            # print calculated lengths
             print(finger_lengths)
+            print(palm_measurements_rounded)
             
     # show the frame with all information rendered on it
     cv2.imshow("Frame",cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
@@ -171,7 +196,7 @@ while True:
     key = cv2.waitKey(1) & 0xFF
     if key == ord("q"):
         # write all the measured data to a txt document
-        for i,x in enumerate(finger_lengths):
+        for i,x in enumerate(np.append(finger_lengths,palm_measurements_rounded)):
             doc.write(str(x) + '\n')
         break
 
