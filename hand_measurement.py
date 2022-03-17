@@ -86,6 +86,9 @@ while True:
         # flattens the ids array so that it can be more easily accessed
         ids = ids.flatten()
 
+        # Create a storage array to store if a given marker is free from perspective distorition
+        marker_flag = np.zeros(4)
+
         if np.all(ids<4):
 
             # initialise a fresh storage for measurements of:
@@ -127,6 +130,7 @@ while True:
                 else:
                     r = 0
                     g = 255
+                    marker_flag[markerID] = 1
                 
                 # create the lines between each marker corner
                 cv2.line(image, topLeft, topRight, (0, g, r), 2)
@@ -188,6 +192,15 @@ while True:
             # print calculated lengths
             print(finger_lengths)
             print(palm_measurements_rounded)
+
+            # if all markers are free from perspective distortion, save out data automatically
+            if np.all(marker_flag == 1):
+                print('Image aligned orthogonally to paper. Capturing data...')
+                cv2.imshow("Frame",cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
+                for i,x in enumerate(np.append(finger_lengths,palm_measurements_rounded)):
+                    doc.write(str(x) + '\n')
+                    print('Data successfully written to file...')
+                break
             
     # show the frame with all information rendered on it
     cv2.imshow("Frame",cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
@@ -195,6 +208,7 @@ while True:
     # define stop key and program break
     key = cv2.waitKey(1) & 0xFF
     if key == ord("q"):
+        print('Program terminated manually by user: writing data file and exiting...')
         # write all the measured data to a txt document
         for i,x in enumerate(np.append(finger_lengths,palm_measurements_rounded)):
             doc.write(str(x) + '\n')
