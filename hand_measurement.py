@@ -68,6 +68,10 @@ doc = open('C:/Users/khong/OneDrive/Documents/MIDP/Grasshopper/data_output.txt',
 # Start the video capture thread. Change the argument of VideoCapture() to change the webcam from which the feed is taken.
 cap = cv2.VideoCapture(1)
 
+
+marker_flag = np.zeros(4)
+aligned_count = 0
+
 # Main loop
 while True:
     # Read a single frame from the video capture thread.
@@ -127,6 +131,7 @@ while True:
                 if np.any(line_deltas > max(line_averages)*0.05):
                     g = 0
                     r = 255
+                    aligned_count = 0
                 else:
                     r = 0
                     g = 255
@@ -193,17 +198,26 @@ while True:
             print(finger_lengths)
             print(palm_measurements_rounded)
 
-            # if all markers are free from perspective distortion, save out data automatically
-            if np.all(marker_flag == 1):
-                print('Image aligned orthogonally to paper. Capturing data...')
-                cv2.imshow("Frame",cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
-                for i,x in enumerate(np.append(finger_lengths,palm_measurements_rounded)):
-                    doc.write(str(x) + '\n')
-                    print('Data successfully written to file...')
-                break
+            
             
     # show the frame with all information rendered on it
     cv2.imshow("Frame",cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
+
+    # if all markers are free from perspective distortion, save out data automatically
+    if np.all(marker_flag == 1):
+        
+        aligned_count = aligned_count + 1
+        print(aligned_count)
+
+        if aligned_count > 10:
+            print('Image aligned orthogonally to paper. Capturing data...')
+            for i,x in enumerate(np.append(finger_lengths,palm_measurements_rounded)):
+                doc.write(str(x) + '\n')
+            print('Data successfully written to file...')
+            input('Press enter to exit...')
+            break
+    
+    
 
     # define stop key and program break
     key = cv2.waitKey(1) & 0xFF
